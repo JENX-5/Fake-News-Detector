@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TruthLens — Fake News Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-mark">T</div>
+        <div class="logo-text">
+          <span class="logo-name">TruthLens</span>
+          <span class="logo-sub">Research Demo · v3.0</span>
+        </div>
+      </div>
+      <nav class="header-nav">
+        <a href="#about" class="nav-link">Methodology</a>
+        <button id="btn-load-example" class="btn-ghost">Load Example</button>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-eyebrow">
+        <span class="eyebrow-dot"></span>
+        7 Models &middot; DistilBERT &middot; ISOT + WELFake
+      </div>
+      <h1 class="hero-title">Is this article<br /><em>telling the truth?</em></h1>
+      <p class="hero-subtitle">A research-grade NLP pipeline that analyses linguistic patterns, stylometric signals, and
+        vocabulary distribution to estimate news credibility. Paste an article or scan live headlines below.</p>
+    </div>
+  </section>
+
+  <div class="tabs-bar">
+    <button class="tab-btn active" data-tab="detector">Article Detector</button>
+    <button class="tab-btn" data-tab="feed">
+      <span class="live-dot"></span>Live Feed
+    </button>
+  </div>
+
+  <!-- ═══════════════ TAB 1: DETECTOR ═══════════════ -->
+  <div id="tab-detector" class="tab-panel active">
+    <main class="main-layout">
+
+      <section class="input-panel" aria-label="Article input">
+        <div class="panel-header">
+          <span class="panel-num">01</span>
+          <span class="panel-title">Paste your article</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="headline">Headline <span class="form-hint">optional</span></label>
+          <input id="headline" type="text" class="form-input" placeholder="e.g. Senate confirms new Secretary of State"
+            autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="article">Article Body <span class="form-hint">more text = more reliable
+              analysis</span></label>
+          <textarea id="article" class="form-textarea"
+            placeholder="Paste your news article here…&#10;&#10;The more text you provide, the more reliable the analysis."
+            spellcheck="false" rows="10"></textarea>
+          <div class="char-counter"><span id="char-count">0</span> chars &middot; <span id="word-count">0</span> words
+          </div>
+        </div>
+        <div class="form-actions">
+          <button id="btn-predict" class="btn-primary">
+            <span class="btn-label">Analyse Article</span>
+            <span class="btn-arrow">&#8594;</span>
+          </button>
+          <button id="btn-clear" class="btn-ghost">Clear</button>
+        </div>
+        <div id="input-error" class="error-msg" role="alert" aria-live="polite"></div>
+        <p class="shortcut-hint">Tip: <kbd>Cmd</kbd>+<kbd>Enter</kbd> to analyse</p>
+      </section>
+
+      <section class="results-panel" aria-label="Detection results" aria-live="polite">
+        <div class="panel-header">
+          <span class="panel-num">02</span>
+          <span class="panel-title">Analysis result</span>
+        </div>
+
+        <div id="state-idle" class="state-card state-idle">
+          <div class="idle-glyph">&#x2315;</div>
+          <p class="idle-title">Ready to analyse</p>
+          <p class="idle-text">Paste an article on the left and click <strong>Analyse Article</strong> to see the
+            verdict, confidence score, and the vocabulary signals that drove the decision.</p>
+        </div>
+
+        <div id="state-loading" class="state-card state-loading" hidden>
+          <div class="loader-bar">
+            <div class="loader-fill"></div>
+          </div>
+          <p class="loading-title">Analysing…</p>
+          <p class="loading-steps">Preprocessing &rarr; Vectorising &rarr; Classifying</p>
+        </div>
+
+        <div id="state-result" class="state-card" hidden>
+          <div id="verdict-banner" class="verdict-banner">
+            <div class="verdict-icon" id="verdict-icon"></div>
+            <div class="verdict-body">
+              <div class="verdict-label" id="verdict-label"></div>
+              <div class="verdict-sub" id="verdict-sub"></div>
+            </div>
+            <div class="verdict-confidence" id="verdict-badge"></div>
+          </div>
+
+          <div class="metrics-row">
+            <div class="metric-card">
+              <div class="metric-value" id="metric-confidence">—</div>
+              <div class="metric-label">Confidence</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value metric-fake" id="metric-fake">—</div>
+              <div class="metric-label">P(Fake)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value metric-real" id="metric-real">—</div>
+              <div class="metric-label">P(Real)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="metric-tokens">—</div>
+              <div class="metric-label">Tokens</div>
+            </div>
+          </div>
+
+          <div class="prob-bar-wrap">
+            <span class="prob-bar-label prob-label-fake">Fake</span>
+            <div class="prob-bar-track">
+              <div class="prob-bar-fill-fake" id="prob-bar-fake"></div>
+              <div class="prob-bar-fill-real" id="prob-bar-real"></div>
+            </div>
+            <span class="prob-bar-label prob-label-real">Real</span>
+          </div>
+
+          <div id="result-warning" class="result-warning" hidden></div>
+
+          <div class="keywords-section">
+            <div class="kw-group">
+              <div class="kw-header kw-header-fake">
+                <span class="kw-dot kw-dot-fake"></span>Fake signals
+              </div>
+              <div class="kw-chips" id="chips-fake"></div>
+            </div>
+            <div class="kw-group">
+              <div class="kw-header kw-header-real">
+                <span class="kw-dot kw-dot-real"></span>Real signals
+              </div>
+              <div class="kw-chips" id="chips-real"></div>
+            </div>
+          </div>
+
+          <div class="highlight-section">
+            <div class="hl-header">Article — highlighted vocabulary</div>
+            <div id="article-highlight" class="article-highlight"></div>
+          </div>
+
+          <div class="result-footer">
+            <span id="latency-display" class="latency-text"></span>
+            <span class="model-tag">MNB · ISOT</span>
+          </div>
+        </div>
+
+        <div id="state-error" class="state-card state-error" hidden>
+          <div class="error-glyph">&#x26A0;</div>
+          <p id="error-message" class="error-text"></p>
+          <button id="btn-retry" class="btn-ghost btn-sm">Try again</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ═══════════════ TAB 2: LIVE FEED ═══════════════ -->
+  <div id="tab-feed" class="tab-panel">
+    <div class="feed-layout">
+
+      <div class="feed-toolbar">
+        <div class="feed-toolbar-left">
+          <h2 class="feed-heading">Live News Feed</h2>
+          <span class="feed-timestamp" id="feed-timestamp"></span>
+        </div>
+        <div class="feed-toolbar-right">
+          <div class="feed-countdown" id="feed-countdown">
+            <span class="countdown-ring" id="countdown-ring"></span>
+            <span id="countdown-text">5:00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="feed-stats" id="feed-stats" style="display:none;">
+        <div class="feed-stat">
+          <span class="feed-stat-val" id="fstat-total">0</span>
+          <span class="feed-stat-label">Scanned</span>
+        </div>
+        <div class="feed-stat">
+          <span class="feed-stat-val is-fake-val" id="fstat-fake">0</span>
+          <span class="feed-stat-label">Flagged Fake</span>
+        </div>
+        <div class="feed-stat">
+          <span class="feed-stat-val is-real-val" id="fstat-real">0</span>
+          <span class="feed-stat-label">Flagged Real</span>
+        </div>
+        <div class="feed-stat">
+          <span class="feed-stat-val" id="fstat-conf">0%</span>
+          <span class="feed-stat-label">Avg Confidence</span>
+        </div>
+      </div>
+
+      <div class="feed-filter-bar" id="feed-filter-bar" style="display:none;">
+        <div class="filter-group">
+          <button class="filter-btn active" data-verdict="all">All</button>
+          <button class="filter-btn filter-real" data-verdict="real">Real</button>
+          <button class="filter-btn filter-fake" data-verdict="fake">Fake</button>
+          <button class="filter-btn filter-low" data-verdict="low">Low confidence</button>
+        </div>
+        <div class="filter-sep"></div>
+        <div class="filter-group">
+          <button class="filter-source-btn src-bbc active" data-source="BBC News">BBC</button>
+          <button class="filter-source-btn src-reuters active" data-source="Reuters">Reuters</button>
+          <button class="filter-source-btn src-ap active" data-source="AP News">AP</button>
+          <button class="filter-source-btn src-aljazeera active" data-source="Al Jazeera">Al Jazeera</button>
+        </div>
+      </div>
+
+      <div id="feed-container">
+        <div class="feed-state-loading" id="feed-loading">
+          <div class="loader-bar loader-bar-wide">
+            <div class="loader-fill"></div>
+          </div>
+          <p class="feed-loading-text">Fetching live articles from BBC &middot; Reuters &middot; AP &middot; Al Jazeera
+          </p>
+        </div>
+        <div class="feed-grid" id="feed-grid" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-strip">
+    <div class="stats-inner">
+      <div class="stat-item">
+        <span class="stat-val">117,032</span>
+        <span class="stat-label">Training articles</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-val">0.9997</span>
+        <span class="stat-label">Best F1 · DistilBERT</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-val">7</span>
+        <span class="stat-label">Models compared</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-val">2</span>
+        <span class="stat-label">Datasets</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-val">0.9995</span>
+        <span class="stat-label">Best MCC · DistilBERT</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- About / Methodology -->
+  <section id="about" class="about-section">
+    <div class="about-inner">
+      <div class="about-header">
+        <p class="about-kicker">Methodology</p>
+        <h2 class="about-title">A six-stage research pipeline</h2>
+        <p class="about-lead">Two datasets. Seven models. Six evaluation metrics. Full explainability and uncertainty
+          quantification.</p>
+      </div>
+
+      <div class="about-grid">
+        <div class="about-card">
+          <div class="about-card-num">01</div>
+          <h3>Preprocessing</h3>
+          <p>12-stage NLP pipeline applied to both ISOT and WELFake: dateline removal, HTML decoding, contraction
+            expansion, negation marking, stopword filtering, WordNet lemmatisation. DistilBERT receives raw text — the
+            pipeline feeds classical models only.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-num">02</div>
+          <h3>Feature Extraction</h3>
+          <p>TF-IDF with 10,000 unigram and bigram features, sublinear TF scaling. Augmented by 11 stylometric signals:
+            capitalisation ratio, exclamation density, type-token ratio, negation frequency, and more.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-num">03</div>
+          <h3>Classical Models</h3>
+          <p>Six classifiers benchmarked under 5-fold cross-validation: Multinomial NB, Complement NB, Logistic
+            Regression, Linear SVM, Random Forest, and a soft-voting Ensemble. Linear SVM leads at F1 = 0.9891 on ISOT.
+          </p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-num">04</div>
+          <h3>DistilBERT Fine-Tuning</h3>
+          <p>66M-parameter transformer fine-tuned for 3 epochs with AdamW + linear warmup on Apple Silicon MPS. Achieves
+            F1 = 0.9997 on ISOT — a cross-dataset degradation of only &minus;0.0064, five times smaller than Linear SVM.
+          </p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-num">05</div>
+          <h3>Explainability</h3>
+          <p>LIME for MNB local explanations. SHAP TreeExplainer for Random Forest global feature importance.
+            Token-level attention heatmaps for DistilBERT, treated as correlational indicators per Jain &amp; Wallace
+            (2019).</p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-num">06</div>
+          <h3>Uncertainty Quantification</h3>
+          <p>Monte Carlo Dropout with 20 stochastic inference passes. Mean P(Real) and standard deviation across passes
+            estimate epistemic uncertainty. Incorrect predictions exhibit measurably higher uncertainty — validating
+            MC-Dropout as a human-review signal.</p>
+        </div>
+      </div>
+
+      <div class="about-disclaimer">
+        <strong>Research Disclaimer</strong> — TruthLens is trained on ISOT (US political news, 2016–2018) and WELFake
+        (multi-source aggregated). It is a research demonstration, not a production fact-checking system. Automated
+        detection should supplement — never replace — independent critical judgement. ECE &approx; 0.41 across all
+        models indicates raw probabilities require post-hoc calibration before deployment.
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">TruthLens &middot; Research Demo v3.0</div>
+      <div class="footer-meta">
+        ISOT (Ahmed et al., 2018) &middot; WELFake (Verma &amp; Dhawan, 2021) &middot; MNB &middot; LR &middot; SVM
+        &middot; RF &middot; Ensemble &middot; DistilBERT
+      </div>
+      <div class="footer-note">Academic presentation only</div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

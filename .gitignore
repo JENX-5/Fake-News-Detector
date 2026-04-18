@@ -1,0 +1,12 @@
+.venv
+__pycache__
+*.pyc
+README.md
+models
+outputs
+results
+data
+node_modules
+.vercel
+.env*.local
+git 

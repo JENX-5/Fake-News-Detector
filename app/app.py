@@ -10,7 +10,11 @@ import os
 import logging
 import socket
 from flask import Flask, send_from_directory
-from backend.routes import api_bp
+
+try:
+    from .backend.routes import api_bp
+except ImportError:
+    from backend.routes import api_bp
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,7 +28,7 @@ def create_app() -> Flask:
         static_folder=os.path.join(os.path.dirname(__file__), "frontend"),
         static_url_path="",
     )
-
+    app.debug = True
     # ── CORS (allow frontend dev server during development) ───────
     try:
         from flask_cors import CORS

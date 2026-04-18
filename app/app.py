@@ -10,7 +10,7 @@ import os
 import logging
 import socket
 from flask import Flask, send_from_directory
-from .backend.routes import api_bp
+from backend.routes import api_bp
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,8 +61,8 @@ def resolve_port(preferred_port: int = 5000, max_attempts: int = 20) -> int:
     return int(os.environ.get("PORT", preferred_port))
 
 
+# Expose the WSGI app object for Vercel
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
-    port = resolve_port()
-    print(f"Serving on http://localhost:{port}")
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=5000)

@@ -1,0 +1,19 @@
+# Ignore unnecessary directories
+outputs/
+data/
+results/
+.venv/
+.vercel/
+.git/
+
+# Ignore system files
+.DS_Store
+
+# Exclude unnecessary files and directories
+outputs/
+data/
+results/
+.venv/
+.vercel/
+.git/
+.DS_Store

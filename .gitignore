@@ -2,7 +2,6 @@
 __pycache__
 *.pyc
 README.md
-models
 outputs
 results
 data
